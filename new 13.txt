@@ -1,0 +1,43 @@
+function SearchCharger() {
+  var serialNumber = document.getElementById("serialNumber").value.trim();
+  var ip = document.getElementById("ip").value.trim();
+  var SearchCharger = document.getElementById("m_SearchBoxSearchBtn").value;
+  var SearchValue = document.getElementById("m_ChargerSearchBoxText").value.trim();
+  
+  if (SearchValue.length < 1) {
+    alert("Enter at least one character to perform a search");
+    return;
+  }
+  
+  if (SearchValue.indexOf('%') !== -1) {
+    alert("Search key should not have the wild character '%'");
+    return;
+  }
+  
+  showLoadingScreen();
+  
+  if (serialNumber !== "") {
+    GetAjaxService().GetChargerBySerial(SearchCharger, SearchValue, function(result) {
+      displayChargerResults(result, "Serial Number");
+    });
+  } else if (ip !== "") {
+    GetAjaxService().GetChargerByIp(SearchCharger, SearchValue, function(result) {
+      displayChargerResults(result, "IP");
+    });
+  }
+}
+
+function displayChargerResults(result, identifier) {
+  var table = document.createElement("table");
+  var headers = "<tr><th>" + identifier + "</th><th>Charger Type</th><th>Full Name</th></tr>";
+  var rows = "";
+
+  for (var i = 0; i < result.length; i++) {
+    var charger = result[i];
+    rows += "<tr><td>" + charger[identifier] + "</td><td>" + charger.ChargerType + "</td><td>" + charger.FullName + "</td></tr>";
+  }
+
+  table.innerHTML = headers + rows;
+  document.getElementById("searchResult").appendChild(table);
+  disableLoadingScreen();
+}

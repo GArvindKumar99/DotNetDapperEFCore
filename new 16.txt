@@ -1,0 +1,12 @@
+
+-- to find last sequence of RFID
+select * from OfficeRFIDs where RFID like 'VR%' and CustomerId is null order by id desc 
+
+
+
+select GETUTCDATE()
+
+
+--gets actual date
+
+

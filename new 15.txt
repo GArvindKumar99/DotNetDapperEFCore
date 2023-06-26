@@ -1,0 +1,28 @@
+CREATE PROCEDURE [dbo].[SP_OM_GetChargersBySerial]
+	@Serial nvarchar(50) =NULL,
+	@IP nvarchar(50)=NULL
+AS
+BEGIN
+     SET NOCOUNT ON;
+	 	 	
+	if @Serial is not  null or @Serial <> ''
+	BEGIN 
+	
+		 SELECT c.Id, c.Serial, c.ChargerType, c.IP, cc.FirstName + ' ' + cc.LastName AS FullName
+        FROM OfficeChargers c 
+        INNER JOIN OfficeCustomers oc ON c.CustomerId=oc.Id 
+        INNER JOIN CustomerContact cc ON oc.ContactId=cc.Id
+        WHERE c.Serial=@Serial
+    END
+
+	else IF @IP IS NOT NULL or @IP <> ''
+	BEGIN
+	  SELECT c.Id, c.Serial, c.ChargerType, c.IP, cc.FirstName + ' ' + cc.LastName AS FullName
+        FROM OfficeChargers c 
+        INNER JOIN OfficeCustomers oc ON c.CustomerId=oc.Id 
+        INNER JOIN CustomerContact cc ON oc.ContactId=cc.Id  
+        WHERE c.IP = @IP
+
+END
+	     	  
+END

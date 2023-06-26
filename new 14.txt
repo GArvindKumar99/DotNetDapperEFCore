@@ -1,0 +1,143 @@
+function searchContactTabSelected(evt, searchParam) {
+    var i, tabcontent, tablinks;
+  
+    document.getElementById("contactTabBtnName").className = "tabBtn tabBtnCustom";
+    document.getElementById("contactTabBtnMobNum").className = "tabBtn tabBtnCustom";
+    document.getElementById("contactTabBtnEmail").className = "tabBtn tabBtnCustom";
+    document.getElementById("contactTabBtnAddress").className = "tabBtn tabBtnCustom";
+
+    /*tablinks = document.getElementsByClassName("tabBtn");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }*/
+
+    //document.getElementById("m_SearchBoxText").value = ""; 
+    DisplayTextBoxForContactSearchBar(evt.currentTarget.value, searchParam);
+    document.getElementById("m_SearchBoxContactSearchBtn").value = evt.currentTarget.value;
+
+    evt.currentTarget.className += " active";
+}
+
+----
+function SearchCharger() {
+    var serialNumber = document.getElementById("m_ChargerSearchBoxText").value.trim();
+    var ip = document.getElementById("m_ChargerSearchBoxText").value.trim();
+    var SearchChargerOption = document.getElementById("m_SearchBoxSearchBtn").value;
+    var SearchValue = document.getElementById("m_ChargerSearchBoxText").value.trim();
+
+    if (SearchValue.length < 1) {
+        alert("Enter at least one character to perform a search");
+        return;
+    }
+
+    if (SearchValue.indexOf('%') !== -1) {
+        alert("Search key should not have the wild character '%'");
+        return;
+    }
+
+    showLoadingScreen();
+
+    if (SearchChargerOption == 1) { // search by serial
+        if (serialNumber !== "") {
+            GetAjaxService().GetChargerBySerial(SearchChargerOption, SearchValue, function (result) {
+                displayChargerResults(result, "Serial Number");
+            });
+        }
+    } else if (SearchChargerOption == 2) { // search by IP
+        if (ip !== "") {
+            GetAjaxService().GetChargerByIp(SearchChargerOption, SearchValue, function (result) {
+                displayChargerResults(result, "IP");
+            });
+        }
+    }
+}
+
+
+---
+<button id="m_SearchBoxSearchBtn" type="button">Search</button>
+
+----
+function SearchCharger() {
+    var serialNumber = document.getElementById("m_ChargerSearchBoxText").value.trim();
+    var ip = document.getElementById("m_ChargerSearchBoxText").value.trim();
+    var SearchChargerOption = document.getElementById("m_SearchBoxSearchBtnChargers").value;
+    var SearchValue = document.getElementById("m_ChargerSearchBoxText").value.trim();
+
+    if (SearchValue.length < 1) {
+        alert("Enter at least one character to perform a search");
+        return;
+    }
+
+    if (SearchValue.indexOf('%') !== -1) {
+        alert("Search key should not have the wild character '%'");
+        return;
+    }
+
+    showLoadingScreen();
+
+    if (serialNumber !== "") {
+        GetAjaxService().GetChargerBySerial(SearchChargerOption, SearchValue, function (result) {
+            displayChargerResults(result, "Serial Number");
+        });
+    } else if (ip !== "") {
+        GetAjaxService().GetChargerByIp(SearchChargerOption, SearchValue, function (result) {
+            displayChargerResults(result, "IP");
+        });
+    }
+}
+
+function displayChargerResults(result, identifier) {
+    var table = document.createElement("table");
+    var headers = "<tr><th>" + identifier + "</th><th>Charger Type</th><th>Full Name</th></tr>";
+    var rows = "";
+
+    for (var i = 0; i < result.length; i++) {
+        var charger = result[i];
+        rows += "<tr><td>" + charger[identifier] + "</td><td>" + charger.ChargerType + "</td><td>" + charger.FullName + "</td></tr>";
+    }
+
+    table.innerHTML = headers + rows;
+    document.getElementById("searchResult").appendChild(table);
+    disableLoadingScreen();
+}
+
+----
+/*
+function callback_SearchChargers(result) {
+    var table = document.getElementById("m_resTable");
+
+    table.innerHTML = "";
+
+    clearObject();
+    document.getElementById("imgNotFound").style.display = "none";
+    document.getElementById("m_lableViewMore").className = "Hidden";
+    document.getElementById("divBtnUpDownGrp").style.display = "none";
+
+    //Hide the no result Image 
+    if (result.length <= 0) {
+        //Show the Image here
+        document.getElementById("imgNotFound").style.display = "";
+        disableLoadingScreen();
+        return;
+    }
+
+    chargerList = [];
+    resChargerList = result;
+
+    //document.getElementById("imgSearchResultsExpand").classList.remove("hide");
+
+    table.innerHTML = "<table><tr><th>Serial/IP</th><th>Charger Type</th><th>Full Name</th></tr></table>"
+    //let isPinnedCustomer = false;
+    InsertUpdateRows(table, result.map(item => new ChargerInfo(item)), 0);
+
+    if (((table.rows.length - 1) > 0) && (table.rows.length - 1 < resChargerList.length)) {
+        document.getElementById("m_lableViewMore").className = "viewMoreLabel";
+    }
+    else {
+        document.getElementById("m_lableViewMore").className = "Hidden";
+    }
+    if (table.rows.length > 7)
+        document.getElementById("divBtnUpDownGrp").style.display = "block";
+
+    disableLoadingScreen();
+}*/

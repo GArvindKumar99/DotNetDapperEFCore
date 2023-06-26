@@ -1,0 +1,18 @@
+function SearchCharger() {
+    var SearchValue = document.getElementById("m_ChargerSearchBoxText").value.trim();
+
+    if (SearchValue.length < 1) {
+        alert("Enter at least one character to perform a search.");
+        return;
+    }
+
+    if (SearchValue.indexOf('%') != -1) {
+        alert("Search key should not have the wildcard character '%'.");
+        return;
+    }
+
+    showLoadingScreen();
+
+    // Call the backend API to search for chargers matching the search value.
+    GetAjaxService().SearchCharger(SearchValue, callback_searchchargers);
+}

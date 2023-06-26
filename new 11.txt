@@ -1,0 +1,15 @@
+function displaySearchChargerToCustomer() {
+    var objectContainer = document.getElementById("m_Object");
+    var result = [
+        "<span class=\"SpanHeader\">Search Chargers</span>",
+        "<input class=\"SmartSearchKeyBox\" type=\"text\" placeholder=\"search\" 
+		id=\"m_SmartSearchKeyBoxChargers\" onkeyup=\"searchChargers(this.value);
+		preventSubmit(event);\"  onclose=\"searchChargers(this.value);\"/>",
+        "<span class=\"ButtonBox\" onclick=\"selectChargers();\">Select</span>",
+        "<span class=\"ButtonLinkNew\" onclick=\"clearChargersSearchBox();\">Clear</span>",
+        "<br/>",
+        "<div id=\"m_ChargersSearchResults\"></div>",
+    ].join('\n');
+
+    objectContainer.innerHTML = result;
+}
