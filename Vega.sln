@@ -1,0 +1,60 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30413.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vega", "Vega\Vega.csproj", "{7FE1339A-D0D3-4F8B-8655-AC0B9A78E901}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GnCommon", "GnCommon\GnCommon.csproj", "{ADA1575A-0A4B-45D4-BCB0-7BD0F7C9A583}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GnCommonBL", "GnCommonBL\GnCommonBL.csproj", "{C29E07FA-9F7C-4C0A-9565-6DE5DA64ECC7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GnDAL", "GnDAL\GnDAL.csproj", "{BDBD7A11-DFFC-4498-99C4-262913F83066}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VegaBL", "VegaBL\VegaBL.csproj", "{82D6CF47-31AD-4F8A-BD2F-1B67DFACCB03}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VegaCustomEntities", "VegaCustomEntities\VegaCustomEntities.csproj", "{3082A0D0-F4E8-4C15-95CA-0C82D3A1CD98}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{09C64C74-4206-441D-85F1-B85480F20C24}"
+	ProjectSection(SolutionItems) = preProject
+		azure-pipelines.yml = azure-pipelines.yml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7FE1339A-D0D3-4F8B-8655-AC0B9A78E901}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FE1339A-D0D3-4F8B-8655-AC0B9A78E901}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FE1339A-D0D3-4F8B-8655-AC0B9A78E901}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FE1339A-D0D3-4F8B-8655-AC0B9A78E901}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADA1575A-0A4B-45D4-BCB0-7BD0F7C9A583}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADA1575A-0A4B-45D4-BCB0-7BD0F7C9A583}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADA1575A-0A4B-45D4-BCB0-7BD0F7C9A583}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADA1575A-0A4B-45D4-BCB0-7BD0F7C9A583}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C29E07FA-9F7C-4C0A-9565-6DE5DA64ECC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C29E07FA-9F7C-4C0A-9565-6DE5DA64ECC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C29E07FA-9F7C-4C0A-9565-6DE5DA64ECC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C29E07FA-9F7C-4C0A-9565-6DE5DA64ECC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BDBD7A11-DFFC-4498-99C4-262913F83066}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BDBD7A11-DFFC-4498-99C4-262913F83066}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BDBD7A11-DFFC-4498-99C4-262913F83066}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BDBD7A11-DFFC-4498-99C4-262913F83066}.Release|Any CPU.Build.0 = Release|Any CPU
+		{82D6CF47-31AD-4F8A-BD2F-1B67DFACCB03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82D6CF47-31AD-4F8A-BD2F-1B67DFACCB03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{82D6CF47-31AD-4F8A-BD2F-1B67DFACCB03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{82D6CF47-31AD-4F8A-BD2F-1B67DFACCB03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3082A0D0-F4E8-4C15-95CA-0C82D3A1CD98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3082A0D0-F4E8-4C15-95CA-0C82D3A1CD98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3082A0D0-F4E8-4C15-95CA-0C82D3A1CD98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3082A0D0-F4E8-4C15-95CA-0C82D3A1CD98}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5B251881-BB17-441F-9C43-58C1022EFE16}
+	EndGlobalSection
+EndGlobal
