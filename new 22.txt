@@ -1,0 +1,15 @@
+In C#, you can return an empty array by using the Array.Empty<T>() method
+ or by explicitly creating an empty array with the desired type. 
+ Here's an example of both approaches:
+
+Using Array.Empty<T>() method:
+
+int[] emptyArray = Array.Empty<int>();
+
+
+
+Creating an empty array explicitly:
+csharp
+Copy code
+int[] emptyArray = new int[0];
+Both approaches will give you an empty array of type int[]. Replace int with the appropriate type if you need an empty array of a different data type.

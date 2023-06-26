@@ -1,15 +1,21 @@
-function displaySearchChargerToCustomer() {
-    var objectContainer = document.getElementById("m_Object");
-    var result = [
-        "<span class=\"SpanHeader\">Search Chargers</span>",
-        "<input class=\"SmartSearchKeyBox\" type=\"text\" placeholder=\"search\" 
-		id=\"m_SmartSearchKeyBoxChargers\" onkeyup=\"searchChargers(this.value);
-		preventSubmit(event);\"  onclose=\"searchChargers(this.value);\"/>",
-        "<span class=\"ButtonBox\" onclick=\"selectChargers();\">Select</span>",
-        "<span class=\"ButtonLinkNew\" onclick=\"clearChargersSearchBox();\">Clear</span>",
-        "<br/>",
-        "<div id=\"m_ChargersSearchResults\"></div>",
-    ].join('\n');
+async function AssignVrfid(customerId) {
+ 
 
-    objectContainer.innerHTML = result;
-}
+        let request = {
+            ID: customerId
+        };
+
+        let response = await fetch('AjaxWebService.svc/AssignVrfid', {
+            method: 'POST',
+            headers: new Headers({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(request)
+        });
+
+        let result = await response.json();
+    if (result != null) {
+
+        callback_AssignVrfid();
+
+    }
+           
+ }

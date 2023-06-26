@@ -1,0 +1,584 @@
+
+
+explain these codes of Download api:
+
+charging transaction controller
+
+   [Authorize]
+        [HttpPost("[action]")]
+        public async Task<ActionResult> Download([FromBody] SearchChargingTransactionRequest searchChargingTransactionRequest, string lang = "en")
+        {
+            int vendorId;
+
+            var userId = _vegaHelper.GetUserId();
+
+            var userData = await _accountService.ReadUserData(userId);
+
+            if (_vegaHelper.CanViewAllVendor(userData))
+                vendorId = searchChargingTransactionRequest.VendorId;
+            else
+                vendorId = _vegaHelper.GetVendorId(userData);
+
+            var customerId = _vegaHelper.GetCustomerId(userData);
+
+            var items = await _chargingTransactionsService.DownloadAllMatchingTransactions(searchChargingTransactionRequest, vendorId, customerId, lang);
+
+            string filename = $@"C:\temp\{string.Format(DateTime.UtcNow.ToString("ddMMyyyy HHmmss"))}.csv";
+
+            CreateCvsFile(filename, items);
+            var csvByte = Helper.FileToByteArray(filename);
+
+            var stream = new MemoryStream(csvByte);
+            stream.Position = 0;
+
+            return File(stream, "application/octec-stream", Path.GetFileName(filename));
+        }
+----
+ChargingTransaction.cs
+
+
+using System.Collections.Generic;
+
+namespace VegaCustomEntities.Models
+{
+    public class SearchChargingTransactionRequest
+    {
+        public int VendorId { get; set; }
+        public string ReferenceCode { get; set; }
+        public string SiteName { get; set; }
+        public string ChargerSerial { get; set; }
+        public string CustomerName { get; set; }
+        public string IdTagLabel { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; } = 50;
+        public int TimezoneOffset { get; set; }
+        public bool? AuthValid { get; set; }
+        public ChargingTransactionsMoreFilter ChargingTransactionsMoreFilter { get; set; }
+    }
+
+    public class ChargingTransactionsMoreFilter
+    {
+        public string SearchOption { get; set; }
+        public string SearchValue { get; set; }
+        public string SelectPeriod { get; set; }
+    }
+}
+
+-----
+IvegaHelper.cs
+
+using VegaCustomEntities.Models;
+
+namespace VegaBL.Helper
+{
+    public interface IVegaHelper
+    {
+        string GetUICultureInfo();
+        int GetVendorId	(VegaUserData vegaUserData);        
+        bool CanViewAllVendor(VegaUserData vegaUserData);
+        int GetCustomerId(VegaUserData userData);
+        int GetUserId();
+    }
+}
+
+---
+vegaHelper.cs
+
+
+using GnCommonBL.Constants;
+using GnDAL.Models.Emobility;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
+using System;
+using System.Linq;
+using VegaBL.Constants;
+using VegaBL.ServiceInterfaces;
+using VegaBL.Services;
+using VegaCustomEntities.Cookies;
+using VegaCustomEntities.Models;
+
+namespace VegaBL.Helper
+{
+    public class VegaHelper : IVegaHelper
+    {
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IOptions<VegaCookies> _vegaCookies;
+        private readonly AccountService _accountService;
+
+        public VegaHelper(IHttpContextAccessor httpContextAccessor, IOptions<VegaCookies> vegaCookies)
+        {
+            _httpContextAccessor = httpContextAccessor;
+            _vegaCookies = vegaCookies;
+        }
+
+        public string GetUICultureInfo()
+        {
+            string cultureUIResult;
+            string cultureInfo;
+
+            _httpContextAccessor.HttpContext.Request.Cookies.TryGetValue(_vegaCookies.Value.CultureCookieName, out cultureInfo);
+
+            if (string.IsNullOrEmpty(cultureInfo))
+                return CommonConstants.LANG_EN;
+
+            var cultureUIInfo = cultureInfo.Split('|').Last();
+
+            if (string.IsNullOrEmpty(cultureUIInfo))
+                return CommonConstants.LANG_EN;
+
+            cultureUIResult = cultureUIInfo.Split('=').Last();
+
+            if (string.IsNullOrEmpty(cultureUIResult))
+                cultureUIResult = CommonConstants.LANG_EN;
+
+            return cultureUIResult;
+        }
+
+        public int GetVendorId(VegaUserData vegaUserData)
+        {
+            return vegaUserData.VendorId;
+        }
+
+        public bool CanViewAllVendor(VegaUserData vegaUserData)
+        {
+            return IsUserPermitted(vegaUserData, "View All Vendor");
+        }
+                
+        public bool IsUserPermitted(VegaUserData userData, string featureName, string permissionName = "", int permissionType = VegaSystem.ACCESS_VIEW_INT)
+        {
+            //Checking for feature
+            var feature = userData.UserGroupFeatures.FirstOrDefault(x => x.Name == featureName);
+
+            if (feature == null)
+                return false;
+
+            if (string.IsNullOrEmpty(permissionName))
+                return true;
+
+            //Checking for permission
+            var permission = feature.UserGroupPermissions.FirstOrDefault(x => x.Name == permissionName);
+            if (permission == null)
+                return false;
+
+            //Checking for permission type
+            if (permission.Type == VegaSystem.ACCESS_NONE_INT)
+                return false;
+
+            switch(permissionType)
+            {
+                case VegaSystem.ACCESS_VIEW_INT:
+                    return VegaSystem.AllowView.Contains(permissionType);
+
+                case VegaSystem.ACCESS_CREATE_INT:
+                    return VegaSystem.AllowCreate.Contains(permissionType);
+
+                case VegaSystem.ACCESS_EDIT_INT:
+                    return VegaSystem.AllowEdit.Contains(permissionType);
+
+                case VegaSystem.ACCESS_DELETE_INT:
+                    return VegaSystem.AllowDelete.Contains(permissionType);
+            }
+
+            return false;
+        }
+
+        public int GetCustomerId(VegaUserData userData)
+        {
+            int customerid = 0;
+
+            customerid = userData.CustomerId == null ? 0 : Convert.ToInt32(userData.CustomerId); // put 0 if customerid is null
+
+            return customerid;
+        }
+
+        public int GetUserId()
+        {
+            int userId;
+
+            var user = _httpContextAccessor.HttpContext.User.Claims.Where(x => x.Type == VegaSystem.CLAIMS_USER_ID).Select(x => x.Value).FirstOrDefault();
+
+            if (string.IsNullOrEmpty(user))
+                return 0;
+
+            int.TryParse(user, out userId);
+
+            return userId;
+        }
+
+
+    }
+}
+-----
+IAccountService
+
+ Task<VegaUserData> ReadUserData(int userId);
+ 
+-----
+AccountService
+
+
+  public async Task<VegaUserData> ReadUserData(int userId)
+        {
+            var userData = new VegaUserData();
+            var user = await _unitOfWork.VegaUsersRepository.GetWithFilterAsSingleRecord(
+                x => x.Id == userId,
+                null,
+                x=>x.VegaUserGroup);
+
+            userData = _mapper.Map<VegaUserData>(user);
+            userData.UserGroupFeatures = new List<UserGroupFeaturesDTO>();
+
+            var dbUserGroupFeature = await _unitOfWork.VegaUserGroupFeaturesRepository.GetWithFilter(
+                x => x.GroupId == userData.GroupId,
+                null,
+                x=>x.Feature);
+
+            foreach (var userGroupFeature in dbUserGroupFeature)
+            {
+                var newFeature = new UserGroupFeaturesDTO();
+                newFeature = _mapper.Map<UserGroupFeaturesDTO>(userGroupFeature);
+                newFeature.UserGroupPermissions = new List<UserGroupPermissionsDTO>();
+
+                var dbUserGroupPermission = await _unitOfWork.VegaUserGroupPermissionsRepository.GetWithFilter(
+                    x => x.GroupId == userData.GroupId && x.Permission.FeatureId == userGroupFeature.FeatureId,
+                    null,
+                    x=>x.Permission);
+
+                foreach (var permission in dbUserGroupPermission)
+                {
+                    var newPermission = new UserGroupPermissionsDTO();
+                    newPermission = _mapper.Map<UserGroupPermissionsDTO>(permission);
+
+                    newFeature.UserGroupPermissions.Add(newPermission);
+                }
+
+                userData.UserGroupFeatures.Add(newFeature);
+            }
+
+            return userData;
+        }
+----
+
+IvegaUsersRepository
+
+using GnDAL.Models.ManagementData;
+
+namespace GnDAL.OldCustomRepository.Interface
+{
+    public interface IVegaUsersRepository : IRepository<VegaUser>
+    {
+    }
+}
+----
+
+VegaUsersRepository
+
+using GnDAL.OldCustomRepository.Interface;
+using GnDAL.Models.ManagementData;
+
+namespace GnDAL.OldCustomRepository.Implementation
+{
+    public class VegaUsersRepository : Repository<VegaUser>, IVegaUsersRepository
+    {
+        public VegaUsersRepository(GNManagementDataDBContext context) : base(context)
+        {
+
+        }
+    }
+}
+----
+
+
+ChargingTransactionService.cs
+
+
+
+public  async Task<List<string>> DownloadAllMatchingTransactions(SearchChargingTransactionRequest searchChargingTransactionRequest, int vendorId, int customerId, string lang)
+        {
+            List<BillingInfo> result = new List<BillingInfo>();
+            var SearchValue = searchChargingTransactionRequest.ChargingTransactionsMoreFilter.SearchValue;
+            Expression<Func<BillingInfo, bool>> condition = null;
+
+            if (vendorId != 0)
+                condition = condition.And(x => x.Site.VendorId == vendorId);
+
+            if (customerId != 0)
+                condition = condition.And(x => x.Site.CustomerId == customerId);
+
+            condition = condition.And(x => x.Site != null && x.Site.SiteTranslations.Any(l => l.LanguageCode == lang) && x.Site.Country.CountryTranslations.Any(c => c.LanguageCode == lang));
+
+            if (!string.IsNullOrEmpty(searchChargingTransactionRequest.ReferenceCode))
+                condition = condition.And(x => x.Site.Code.Contains(searchChargingTransactionRequest.ReferenceCode));
+
+            if (!string.IsNullOrEmpty(searchChargingTransactionRequest.SiteName))
+                condition = condition.And(x => x.Site.SiteTranslations.Where(l => l.LanguageCode == lang).FirstOrDefault().Name.Contains(searchChargingTransactionRequest.SiteName));
+
+            if (!string.IsNullOrEmpty(searchChargingTransactionRequest.ChargerSerial))
+                condition = condition.And(x => x.CbId.Contains(searchChargingTransactionRequest.ChargerSerial));
+
+            if (searchChargingTransactionRequest.AuthValid != null)
+                condition = condition.And(x => x.AuthValid == searchChargingTransactionRequest.AuthValid);
+
+            var customername = searchChargingTransactionRequest.CustomerName;
+            if (!string.IsNullOrEmpty(customername))
+                customername = customername.Replace(" ", "");
+
+            if (!string.IsNullOrEmpty(searchChargingTransactionRequest.CustomerName))
+                condition = condition.And(x => string.Concat(x.Customer.Contact.FirstName, x.Customer.Contact.LastName).Replace(" ", "").Contains(customername) || string.Concat(x.Customer.Contact.LastName, x.Customer.Contact.FirstName).Replace(" ", "").Contains(customername));
+
+            if (!string.IsNullOrEmpty(searchChargingTransactionRequest.IdTagLabel))
+                condition = condition.And(x => x.IdTagNavigation.Rfidname.Contains(searchChargingTransactionRequest.IdTagLabel));
+
+            switch (searchChargingTransactionRequest.ChargingTransactionsMoreFilter.SearchOption.ToLower())//to ignore case
+            {
+                case VegaConstants.SEARCH_OPTION_SPECIFYPERIOD:
+                case VegaConstants.SEARCH_OPTION_SELECT_PERIOD:
+                    var period = SearchValue.Split(';');
+                    var start = period[0];
+                    var startTime = DateTime.Parse(start);
+                    var stop = period[1];
+                    var stopTime = DateTime.Parse(stop);
+
+                    condition = condition.And(x => x.StartTime >= startTime && x.StopTime <= stopTime);
+                    result = await _oldUnitOfWork.BillingInfoRepository.GetWithFilter(
+                        condition,
+                        x => x.OrderByDescending(x => x.TransactionId),
+                        x => x.Customer.Contact,
+                        x => x.IdTagNavigation,
+                        x => x.Site.SiteType,
+                        x => x.Site.SiteTranslations.Where(x => x.LanguageCode == lang),
+                        x => x.Site.Country.CountryTranslations.Where(x => x.LanguageCode == lang));
+                    break;
+
+                case VegaConstants.SEARCH_OPTION_COUNT:
+                default:
+                    int count = int.TryParse(SearchValue, out count) ? count : 50;
+                    result = await _oldUnitOfWork.BillingInfoRepository.GetTopOrBottomRecords(
+                        x => x.OrderByDescending(x => x.TransactionId),
+                        condition,
+                        count,
+                        x => x.Customer.Contact,
+                        x => x.IdTagNavigation,
+                        x => x.Site.SiteType,
+                        x => x.Site.SiteTranslations.Where(x => x.LanguageCode == lang),
+                        x => x.Site.Country.CountryTranslations.Where(x => x.LanguageCode == lang));
+                    break;
+            }
+
+            var chargingTransactionsResult = _mapper.Map<List<ChargingTransactionsResult>>(result);
+
+            if (chargingTransactionsResult == null)
+                return null;
+
+            var vendors = await _vendorService.ReadAllVedors();
+            foreach (var item in chargingTransactionsResult)
+            {
+                item.Vendor = vendors.FirstOrDefault(x => x.Id == item.VendorId).Name;
+            }
+
+            var response = new List<string>();
+            response.Add("Tx Id,Vendor,Station name,Site type,Reference code,Charge spot serial,Connector ID,Customer name,ID tag Label,Card ID,Start time,Stop time,Duration,Consumption(kW),TotalConsumption1,Start meter(kW),Stop meter(kW),Start SOC,Stop SOC,Stop reason,AuthValid,Station address");
+
+            double totalConsumption = 0;
+            foreach (var tx in chargingTransactionsResult)
+            {
+                //var totalconsumption1 = await _unitOfWork.BillingInfoRepository.GetTotalConsumption(tx.TxId);
+
+                StringBuilder item = new StringBuilder();
+                item.Append($"{tx.TxId},");
+                item.Append($"{tx.Vendor.ReplaceCSVDelimiters()},");
+                item.Append($"{tx.SiteName.ReplaceCSVDelimiters()},");
+                item.Append($"{tx.Sitetype},");
+                item.Append($"{tx.ReferenceCode.ReplaceCSVDelimiters()},");
+                item.Append($"{tx.ChargerSerial},");
+                item.Append($"{tx.ConnectorNumber},");
+                item.Append($"{tx.CustomerName.ReplaceCSVDelimiters()},");
+                item.Append($"{tx.IdTagLabel},");
+                item.Append($"{tx.CardId},");
+
+                var localStartTime = tx.StartTime.ToUserLocalTime(searchChargingTransactionRequest.TimezoneOffset);
+
+                var localStopTime = tx.StopTime.ToUserLocalTime(searchChargingTransactionRequest.TimezoneOffset);
+
+                item.Append($"{localStartTime.ToString("yyyy-MMM-dd HH:mm:ss")},");
+                item.Append($"{localStopTime.ToString("yyyy-MMM-dd HH:mm:ss")},");
+                item.Append($"{tx.Duration},");
+                item.Append($"{tx.Consumption},");
+                item.Append($"{tx.TotalConsumption1},");
+
+                double consumption = 0;
+                double.TryParse(tx.Consumption, out consumption);
+
+                if (consumption > 0)
+                    totalConsumption += consumption;
+
+                item.Append($"{tx.StartMeter.ReplaceCSVDelimiters()},");
+                item.Append($"{tx.StopMeter.ReplaceCSVDelimiters()},");
+
+                var startSOC = tx.StartSOC.ReplaceCSVDelimiters();
+                if (!string.IsNullOrEmpty(startSOC))
+                {
+                    startSOC = $"{startSOC}%";
+                }
+
+                var stopSOC = tx.StopSOC.ReplaceCSVDelimiters();
+                if (!string.IsNullOrEmpty(stopSOC))
+                {
+                    stopSOC = $"{stopSOC}%";
+                }
+
+                if (startSOC == "" || stopSOC == "")
+                {
+                    startSOC = stopSOC = "";
+                }
+
+                item.Append($"{startSOC},");
+                item.Append($"{stopSOC},");
+                item.Append($"{tx.StopReason.ReplaceCSVDelimiters()},");
+                
+                if(tx.Authvalid)
+                    item.Append($"Success,");
+                else
+                    item.Append($"Failed,");
+
+                item.Append($"{tx.SiteAddress.ReplaceCSVDelimiters()}");
+
+                response.Add(item.ToString());
+            }
+
+            totalConsumption = Math.Round(totalConsumption, 3, MidpointRounding.AwayFromZero);
+            var str = String.Format("{0:0.00}", result);
+
+            response.Add($",,,,,,,,,,,Total consumption,{totalConsumption} kW");
+
+            return response;
+        }
+		
+		
+-----
+
+
+The given code represents an API controller method for downloading charging transactions.
+ Let's break down the code step by step:
+
+The method is decorated with the [Authorize] attribute,
+ indicating that the user must be authenticated to access this endpoint.
+
+The [HttpPost("[action]")] attribute specifies the HTTP POST route for this action.
+ The [action] placeholder will be replaced with the action name or method name.
+ 
+The method takes two parameters: searchChargingTransactionRequest of type SearchChargingTransactionRequest and
+lang of type string (with a default value of "en").
+
+Inside the method, it retrieves the user ID using the _vegaHelper.GetUserId() method and
+ reads the user data associated with that ID using the _accountService.ReadUserData(userId) method.
+ 
+Based on the user's permissions, it determines the vendorId to be used for the transaction search.
+
+It retrieves the customerId from the user data using the _vegaHelper.GetCustomerId(userData) method.
+
+It calls the _chargingTransactionsService.DownloadAllMatchingTransactions method,
+ passing the search criterias vendorId, customerId, and lang, to retrieve a list of matching transactions.
+ 
+It generates a filename for the CSV file based on the current date and time.
+
+It creates the CSV file using the CreateCvsFile method,
+ passing the filename and the items (matching transactions) obtained in the previous step.
+ 
+It converts the CSV file to a byte array using the Helper.FileToByteArray method.
+It creates a memory stream from the byte array.
+It sets the stream position to the beginning.
+
+It returns the file as a File result, with the stream as the content and the appropriate content type and file name.
+-----
+
+The SearchChargingTransactionRequest class represents the search criteria for charging transactions.
+ It contains properties such as VendorId, ReferenceCode, SiteName,
+ ChargerSerial, CustomerName, IdTagLabel, PageNumber, PageSize, TimezoneOffset, AuthValid, and ChargingTransactionsMoreFilter.
+
+The ChargingTransactionsMoreFilter class is a nested class within SearchChargingTransactionRequest
+ and contains additional filtering options for charging transactions.
+ ------
+ 
+
+The IVegaHelper interface defines a contract for a helper class that provides various utility methods related to the Vega system.
+
+----
+
+The VegaHelper class implements the IVegaHelper interface
+ and provides implementations for the utility methods. 
+ It retrieves the user's UI culture information, vendor ID, customer ID, and user ID
+ based on the current HTTP context and user data.
+ ----
+
+The IAccountService interface declares a method ReadUserData
+ that retrieves user data based on the user ID.
+ -----
+
+The AccountService class implements the IAccountService interface
+ and provides the implementation for the ReadUserData method.
+ It retrieves the user data and related information using the Vega user repository and mappings.
+ -----
+
+The IVegaUsersRepository interface is a repository interface for the VegaUser entity.
+----
+
+The VegaUsersRepository class implements the IVegaUsersRepository interface
+ and provides the implementation for the repository methods related to the VegaUser entity.
+ ----
+
+The ChargingTransactionService class contains a method DownloadAllMatchingTransactions
+ that retrieves a list of matching charging transactions based on the search criteria, vendor ID,
+ customer ID, and language. 
+ It uses various conditions to filter the transactions and retrieves the data from the repository. 
+ Finally, it maps the retrieved data to a list of ChargingTransactionsResult objects and prepares a CSV response 
+ with the required information.
+
+------
+
+The DownloadAllMatchingTransactions method is part of the ChargingTransactionService class.
+ This method is responsible for retrieving charging transactions based on the provided search criteria 
+ and generating a CSV file with the transaction data.
+
+The method takes a SearchChargingTransactionRequest object, vendorId, customerId, and lang as parameters. 
+It begins by initializing an empty list called result to store the retrieved billing information.
+
+The method then checks the vendorId and customerId values to determine if they are provided.
+ If a vendorId is provided (not equal to 0), 
+ a condition is added to filter the billing information based on the vendor's ID. 
+ The same applies to the customerId.
+ These conditions are combined using the And extension method of the Expression class.
+
+Next, additional conditions are added to filter the billing information based on other search criteria
+ such as reference code, site name, charger serial, customer name, and ID tag label.
+ These conditions are also combined using the And method.
+
+Based on the SearchOption property of the ChargingTransactionsMoreFilter object,
+ different retrieval strategies are implemented. 
+ 
+ 
+ If the search option is "Specify Period" or "Select Period," 
+ the method extracts the start and stop dates from the SearchValue 
+ and adds a condition to filter the billing information within that period. 
+ 
+ 
+ If the search option is "Count" or not specified, 
+ the method retrieves a specified number of records (default is 50) based on the other conditions.
+
+The retrieved billing information is mapped to a list of ChargingTransactionsResult objects
+ using the AutoMapper library. 
+ The ChargingTransactionsResult class seems to contain properties representing the relevant transaction information.
+
+The method then populates a response list with headers for the CSV file, such as transaction ID, vendor,
+ station name, site type, and other relevant fields.
+
+Next, the method iterates over each charging transaction in the chargingTransactionsResult list and appends
+ the transaction data to the response list as comma-separated values. It also calculates the total consumption by summing up the
+ consumption values of each transaction.
+
+Finally, the method adds a line to the response list indicating the total consumption and returns the response list.
+
+Overall, this method retrieves charging transactions based on the provided search criteria, maps the data to a 
+specific format (ChargingTransactionsResult), and generates a CSV file with the transaction information.
+
+

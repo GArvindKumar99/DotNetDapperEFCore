@@ -1,0 +1,272 @@
+expected response by using ef core 
+	
+Response body
+Download
+{
+  "VendorId": 2,
+  "CustomerId": null,
+  "GroupId": 1,
+  "GroupName": "GnrgyAdmins",
+  "Description": "Admins of Gnrgy",
+  "UserGroupFeatures": [
+    {
+      "Id": 1,
+      "Name": "Charging Stations",
+      "Description": "Charging stations module",
+      "UserGroupPermissions": [
+        {
+          "Id": 1,
+          "Description": "This is Station Details under Vega",
+          "Name": "Station Details",
+          "Type": 4
+        }
+      ]
+    },
+    {
+      "Id": 2,
+      "Name": "Charging Transactions",
+      "Description": "Charging Transactions module",
+      "UserGroupPermissions": []
+    },
+    {
+      "Id": 3,
+      "Name": "Charge Spot",
+      "Description": "Charge Spot module",
+      "UserGroupPermissions": [
+        {
+          "Id": 2,
+          "Description": "This is Charge Spot Details under Vega",
+          "Name": "Charge Spot Details",
+          "Type": 4
+        },
+        {
+          "Id": 3,
+          "Description": "To control Charge Spot Configuration",
+          "Name": "Charge Spot Configuration",
+          "Type": 4
+        },
+        {
+          "Id": 4,
+          "Description": "To control Charge Spot Action",
+          "Name": "Charge Spot Action",
+          "Type": 4
+        },
+        {
+          "Id": 5,
+          "Description": "To control Charge Spot SmartCharging",
+          "Name": "Charge Spot SmartCharging",
+          "Type": 4
+        },
+        {
+          "Id": 6,
+          "Description": "To control Charge Spot LocalAuth",
+          "Name": "Charge Spot LocalAuth",
+          "Type": 4
+        },
+        {
+          "Id": 7,
+          "Description": "To control Charge Spot RemoteCharging",
+          "Name": "Charge Spot RemoteCharging",
+          "Type": 4
+        },
+        {
+          "Id": 8,
+          "Description": "To control Charge Spot OCPPLogs",
+          "Name": "Charge Spot OCPPLogs",
+          "Type": 4
+        }
+      ]
+    },
+    {
+      "Id": 4,
+      "Name": "View All Vendor",
+      "Description": "View All Vendor module",
+      "UserGroupPermissions": []
+    },
+    {
+      "Id": 5,
+      "Name": "Charging Profile",
+      "Description": "Charging Profile module",
+      "UserGroupPermissions": [
+        {
+          "Id": 9,
+          "Description": "To control Charging Profile Configuration",
+          "Name": "Charging Profile configuration",
+          "Type": 4
+        }
+      ]
+    },
+    {
+      "Id": 6,
+      "Name": "IdTag",
+      "Description": "IdTag module",
+      "UserGroupPermissions": [
+        {
+          "Id": 10,
+          "Description": "To control IdTag Configuration",
+          "Name": "IdTag Configuration",
+          "Type": 4
+        }
+      ]
+    },
+    {
+      "Id": 7,
+      "Name": "Admin",
+      "Description": "Admin module",
+      "UserGroupPermissions": []
+    }
+  ]
+}
+
+
+
+
+
+Response from similar  dapper api
+
+{
+  "VendorId": 2,
+  "CustomerId": null,
+  "GroupId": 0,
+  "GroupName": null,
+  "Description": "Admins of Gnrgy",
+  "UserGroupFeatures": null
+}
+
+
+
+query used in dapper 
+   var query = "select * from VegaUserGroups where Id=@Id";
+   
+   
+   existing tables 
+    select * from VegaUsers...columns are Id
+UserName
+Password
+VegaUserGroupId
+FirstName
+LastName
+Mobile
+Email
+CreatedOn
+Status
+CustomerId
+
+	  select * from VegaUserGroupPermissions...columns are Id,
+GroupId,
+PermissionId,
+Type.
+
+	    select * from VegaUserGroupFeatures,,,columns are Id
+GroupId
+FeatureId
+
+		  select * from VegaPermissions...columns are Id
+Name
+Description
+FeatureId
+
+		    select * from VegaFeatures....columns are Id,
+Name,
+Description.
+ 
+    select * from VegaUserGroups ...columns are Id
+Name
+Description
+VendorId
+
+
+
+so kindly give proper query which does good joins and yields expected output...
+
+
+
+var groupId = 1; // Replace with the desired GroupId value
+
+var query = @"
+    SELECT vg.*, vup.Id, vup.Description, vup.Name, vup.Type
+    FROM VegaUserGroups vg
+    LEFT JOIN VegaUserGroupFeatures vguf ON vguf.GroupId = vg.Id
+    LEFT JOIN VegaUserGroupPermissions vup ON vup.GroupId = vguf.GroupId
+    WHERE vg.Id = @GroupId";
+
+using (var connection = new SqlConnection(connectionString))
+{
+    var result = connection.Query<VegaUserGroup>(query, new { GroupId = groupId });
+
+    // Process the result as needed
+}
+
+
+V
+var id = 1; // Replace with the desired Id value
+
+var query = @"
+    SELECT vg.*, vup.Id, vup.Description, vup.Name, vup.Type
+    FROM VegaUserGroups vg
+    LEFT JOIN VegaUserGroupFeatures vguf ON vguf.GroupId = vg.Id
+    LEFT JOIN VegaUserGroupPermissions vup ON vup.GroupId = vguf.GroupId
+    WHERE vg.Id = @Id";
+
+using (var connection = new SqlConnection(connectionString))
+{
+    var result = connection.Query<VegaUserGroup>(query, new { Id = id });
+
+    // Process the result as needed
+}
+
+
+but vup does not have description and Name.So what to do?
+
+
+var id = 1; // Replace with the desired Id value
+
+var query = @"
+    SELECT vg.*, vguf.Id, vguf.Description, vguf.Name, vguf.Type
+    FROM VegaUserGroups vg
+    LEFT JOIN VegaUserGroupFeatures vguf ON vguf.GroupId = vg.Id
+    WHERE vg.Id = @Id";
+
+using (var connection = new SqlConnection(connectionString))
+{
+    var result = connection.Query<VegaUserGroup>(query, new { Id = id });
+
+    // Process the result as needed
+}
+
+
+
+even vguf does not have description and name columns na?
+
+
+
+var id = 1; // Replace with the desired Id value
+
+var query = @"
+    SELECT vg.*, vup.Id, vup.Description, vup.Name, vup.Type
+    FROM VegaUserGroups vg
+    LEFT JOIN VegaUserGroupFeatures vguf ON vguf.GroupId = vg.Id
+    LEFT JOIN VegaUserGroupPermissions vup ON vup.GroupId = vguf.GroupId
+    WHERE vg.Id = @Id";
+
+using (var connection = new SqlConnection(connectionString))
+{
+    var result = connection.Query(query, new { Id = id });
+
+    // Process the result as needed
+}
+
+
+var id = 1; // Replace with the desired Id value
+
+var query = @"
+    SELECT vg.*
+    FROM VegaUserGroups vg
+    WHERE vg.Id = @Id";
+
+using (var connection = new SqlConnection(connectionString))
+{
+    var result = connection.Query(query, new { Id = id });
+
+    // Process the result as needed
+}

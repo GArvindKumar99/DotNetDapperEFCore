@@ -1,40 +1,339 @@
-USE [GN.ManagementData.DB]
-GO
-/****** Object:  StoredProcedure [dbo].[SP_OM_GetChargersBySerial]    Script Date: 5/2/2023 11:38:25 AM ******/
-SET ANSI_NULLS OFF
-GO
-SET QUOTED_IDENTIFIER OFF
-GO
-ALTER PROCEDURE [dbo].[SP_OM_GetChargersBySerial]
-	@Serial nvarchar(50) =NULL,
-	@IP nvarchar(50)=NULL
+ attachRFIDsToCustomer
+ ----
+ 
+ async function attachRFIDsToCustomer() {
+
+    var selectedRfids = RFIDsSmartSearch.GetSelectedItems();
+    const ERR_RFID_SAMECUSTOMER = "Your selection has one or more RFID which are already attached to the same customer.";
+    const ERR_RFID_OTHERCUSTOMER = "Your selection has one or more RFID which are attached to a different customer.";
+    const ERR_RFID_SAMEOTHERCUSTOMER = "Your selection has one or more RFID which are already attached to the same and different customer."
+
+    if (selectedRfids.length > 0) {
+        var attachedRfidsToSameCust = [];
+        var attachedExistingCustomerRFID = [];
+
+        for (var i = 0; i < selectedRfids.length; i++) {
+            let item = selectedRfids[i];
+            if (item.Model.CustomerId != -1) {
+                if (item.Model.CustomerId == selectedCustomer.Id)
+                    attachedRfidsToSameCust.push(item.Model);
+                else
+                    attachedExistingCustomerRFID.push(item.Model);
+            } else {
+                var res = await CheckIfCustomerInRfidNull(item.Id);
+                if (res.CustomerId != -1) {
+                    CloseSpinnerScreen();
+                    var text = `<span style=\"color:red\">
+					Your selection has RFID(s) already attached to a customer.<br>
+					Select Ok to refresh the RFID list.</span><br/>
+					<span class = \"ButtonBox\" onclick = \"RefreshRFIDList();\">Ok</span>`;
+                    displayPopup(text);
+                    return;
+                }
+            }
+        }
+  
+        var msg = "";
+
+        if (attachedExistingCustomerRFID.length > 0 || attachedRfidsToSameCust.length > 0) {
+            if (attachedRfidsToSameCust.length > 0 && attachedExistingCustomerRFID.length > 0)
+                msg = ERR_RFID_SAMEOTHERCUSTOMER;
+            else if (attachedRfidsToSameCust.length > 0)
+                msg = ERR_RFID_SAMECUSTOMER;
+            else if (attachedExistingCustomerRFID.length > 0)
+                msg = ERR_RFID_OTHERCUSTOMER;
+
+            var text = `<span style=\"color:red\">${msg}<br/>
+			Are you sure you want to continue?</span><br/><span class = \"ButtonBox\" 
+			onclick = \"hidePopup();AttachSelectedRfids();\">Yes</span><span class = \"ButtonBox\" onclick = \"hidePopup();\">Cancel</span>`;
+            displayPopup(text);
+        }
+        else {
+            AttachSelectedRfids();
+        }
+    }
+    else {
+        var popUpText = `<span style=\"color:red\">You must select at least one RFID card from the list to proceed.</span><br/><span class=\"ButtonBox\" onclick = \"hidePopup();\">Ok</span>`;
+        displayPopup(popUpText);
+    }
+}
+	
+	--
+	
+	
+	
+
+This code defines an async function called attachRFIDsToCustomer
+
+, which performs some operations related to attaching RFID cards to a customer.
+ Here's a brief summary of what the function does:
+
+It gets a list of selected RFID items using the RFIDsSmartSearch.GetSelectedItems() method.
+It defines three error messages as constants.
+
+If there are selected RFID items, it iterates over them and does the following for each item:
+If the item is already attached to a customer, it checks whether it's attached to the same customer or a different one,
+ and adds it to the corresponding list (attachedRfidsToSameCust or attachedExistingCustomerRFID).
+ 
+If the item is not attached to any customer, it calls the CheckIfCustomerInRfidNull function and
+ shows an error message if the function returns a customer ID.
+ 
+If there are any RFID items attached to a different customer or to the same and different customer, 
+it shows an error message and asks the user whether to continue with the operation.
+If there are no such RFID items, it calls the AttachSelectedRfids function.
+
+Overall, the function seems to be part of a larger system that manages RFID cards and customers, 
+and it performs some basic validation checks before attaching selected RFID cards to a customer.
+	
+
+--
+
+This function is called by attachRFIDsToCustomer and is responsible for attaching selected RFID cards to a customer. 
+Here's what it does:
+
+It gets a list of selected items using the RFIDsSmartSearch.GetSelectedItems() method.
+It extracts the RFID code for each selected item and puts them into a new array called selectedRfids.
+If there is at least one RFID code in selectedRfids, it displays a spinner message with the text "Updating..." 
+using the DispSpinnerMessage function.
+
+It calls the GetAjaxService().AssociateRFIDToCustomerSiriusAPI function
+ to associate the selected RFID cards to the selectedCustomer object, 
+ which was presumably set somewhere else in the code.
+
+ The Callback_AttachRfid function is passed as the success callback,
+ while callbackFailedToAttachRfid is passed as the failure callback.
+ 
+After making the API call, the function clears the content of an HTML element with the ID "m_Object".
+Overall, the function seems to be responsible for the actual attachment of selected RFID cards to a customer, 
+by making a server-side API call and handling success and failure cases.
+
+AttachSelectedRfids
+---
+function AttachSelectedRfids() {
+    var selectedItems = RFIDsSmartSearch.GetSelectedItems();
+
+    var selectedRfids = selectedItems.map(item => { return item.Model.RFID; });
+
+    if (selectedRfids.length > 0) {
+        DispSpinnerMessage("Updating...");
+        GetAjaxService().AssociateRFIDToCustomerSiriusAPI(selectedCustomer.Id, selectedRfids, Callback_AttachRfid, callbackFailedToAttachRfid);
+    }
+    document.getElementById("m_Object").innerHTML = "";
+
+}
+
+---
+
+
+async function CheckIfCustomerInRfidNull(Id) {
+    var req = { Id: Id };
+    var response = await fetch(`${window.origin}/eMobilityPortal/AjaxWebService.svc/GetCustomerRfid`,
+        {
+            method: 'POST',
+            headers: new Headers({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(req)
+        });
+    let result = await response.json();
+    return result.d;
+}
+
+----
+
+  public OfficeRfid GetCustomerRfid(int i_CustomerId)
+        {
+            return this.DLOfficeManagement.InvokeCommand<OfficeRfid>("emobility_GetCustomerRfid",
+                new List<KeyValuePair<string, object>>() {
+                    new KeyValuePair<string, object>("CustomerId", i_CustomerId)
+                });
+        }
+---
+
+
+-- ==================================================================================
+-- 7)emobility_GetCustomerContactList
+-- ==================================================================================
+CREATE    PROCEDURE [dbo].[emobility_GetCustomerRfid]
+	-- Add the parameters for the stored procedure here
+	@Id int
 AS
 BEGIN
-     SET NOCOUNT ON;
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	select top 1 *, (select Co.FirstName + ' ' + Co.LastName
+				from OfficeCustomers Cu, customerContact Co
+				where CustomerId = Cu.Id and Cu.ContactId = Co.Id) as 'Customer' from OfficeRfids
+	where Id = @Id
+
+    -- Insert statements for procedure here
+    
+END
 
 
-	
-	if @Serial is not  null or @Serial <> ''
-	BEGIN 
-	
-		 SELECT c.Id, c.Serial, c.ChargerType, c.IP, cc.FirstName + ' ' + cc.LastName AS FullName
-        FROM OfficeChargers c 
-        INNER JOIN OfficeCustomers oc ON c.CustomerId=oc.Id 
-        INNER JOIN CustomerContact cc ON oc.ContactId=cc.Id
-        WHERE c.Serial=@Serial
-    END
-
-	else IF @IP IS NOT NULL or @IP <> ''
-	BEGIN
-	  SELECT c.Id, c.Serial, c.ChargerType, c.IP, cc.FirstName + ' ' + cc.LastName AS FullName
-        FROM OfficeChargers c 
-        INNER JOIN OfficeCustomers oc ON c.CustomerId=oc.Id 
-        INNER JOIN CustomerContact cc ON oc.ContactId=cc.Id  
-        WHERE c.IP = @IP
-
-	
+-----
 
 
-	END
+ public int AssociateRFIDToCustomerSiriusAPI(int CustomerId, string[] RFIDs, bool isActive = false)
+        {
+            string url = ConfigurationManager.AppSettings["SiriusConfigRootURL"].Trim();
+            string accessToken = ConfigurationManager.AppSettings["SiriusConfigAccessToken"].Trim();
+
+            string subjectFormat = "Failed to attach RFIDs to Customerid = {0}";
+            string messageFormat = "Failed to attach following RFIDs to customerid = {0}\n{1}\n\nRequest: \n{2}\n\n{3}\n\n";
+
+            List<OfficeRFID> officeRFIDs = this.DALOfficeManagement.AssociateRFIDToCustomer(CustomerId, RFIDs, isActive);
+
+            if (!(officeRFIDs.Count > 0))
+                return RESPONSE_ERR_CRM;
+
+            var updateRfidRequest = new UpdateRFIDRequest();
+            foreach (var item in officeRFIDs)
+                updateRfidRequest.Add(item);
+
+            string requestString = updateRfidRequest.ToString();
+
+            using (HttpClient client = new HttpClient())
+            {
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"{url}UpdateIdTagStatus");
+                request.Headers.Add("AccessToken", accessToken);
+                request.Content = new StringContent(requestString, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage responseMessage = client.SendAsync(request).Result;
+                if (responseMessage.StatusCode == HttpStatusCode.OK)
+                {
+                    var responseString = responseMessage.Content.ReadAsStringAsync().Result;
+                    UpdateRFIDSuccessResponse[] response = JsonHandler.DeSerialize<UpdateRFIDSuccessResponse[]>(responseString);
+
+                    if (response.Length <= 0)
+                    {
+                        string subject = string.Format(subjectFormat, CustomerId);
+                        string message = string.Format(messageFormat, CustomerId, string.Join("\n", RFIDs), requestString, "Response:\n" + responseString);
+                        this.InsertMailForSupportGroup(subject, message);
+
+                        return RESPONSE_ERR_CHARGERBACKEND;
+
+                    }
+
+                    string[] failureRfids = response.Where(resp => resp.HasStatus("Error", "Failed")).Select(resp => resp.IdTag).ToArray();
+
+                    if (failureRfids.Length > 0)
+                    {
+                        string subject = string.Format(subjectFormat, CustomerId);
+                        string message = string.Format(messageFormat, CustomerId, string.Join("\n", failureRfids), requestString, "Response:\n" + responseString);
+                        this.InsertMailForSupportGroup(subject, message);
+
+                        return RESPONSE_ERR_CHARGERBACKEND;
+                    }
+                    else
+                    {
+                        return RESPONSE_SUCCESS;
+                    }
+                }
+                else
+                {
+                    string subject = string.Format(subjectFormat, CustomerId);
+                    string message = string.Format(messageFormat, CustomerId, string.Join("\n", RFIDs), requestString, "HttpStatusCode: " + responseMessage.StatusCode);
+                    this.InsertMailForSupportGroup(subject, message);
+
+                    return RESPONSE_ERR_CHARGERBACKEND;
+                }
+
+            }
+
+        }
+---
+
+stored procedure SP_OM_AssociateRFIDToCustomer
+
+
+-- =============================================
+-- Author:      <Author,,Name>
+-- Create date: <Create Date,,>
+-- Description: <Description,,>
+-- =============================================
+CREATE   PROCEDURE [dbo].[SP_OM_AssociateRFIDToCustomer]
+    -- Add the parameters for the stored procedure here
+    @CustomerId int,
+    @RFIDId varchar(max),
+    @IsActive bit
+AS
+BEGIN
+    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON;
+    -- Insert statements for procedure here    
+    update OfficeRFIDs
+    set CustomerId = @CustomerId,
+        RegisterDate = GETDATE(),
+        IsActive = @IsActive
+    where RFID = @RFIDId
+    select Id,RFID,Type,CustomerId,RegisterDate,LastUpdate,IsActive,CardId 
+	from OfficeRFIDs where CustomerId = @CustomerId and RFID = @RFIDId
+END
+
+----
+
+
+ AssociateRFIDToCustomerSiriusAPI.
+ 
+This method associates RFID tags to a customer using the Sirius API. 
+Here is a breakdown of the code:
+
+The method takes three parameters: CustomerId (an integer representing the ID of the customer)
+, RFIDs (an array of strings representing the RFID tags to associate), 
+and an optional parameter isActive (a boolean indicating whether the RFID tags should be active or not, with a default value of false).
+
+The method retrieves the base URL and access token from the application configuration 
+using ConfigurationManager.AppSettings.
+
+It initializes some string variables for error reporting.
+
+The method calls a data access layer (DALOfficeManagement) to associate the RFID tags with the customer.
+ The result is stored in a list called officeRFIDs.
+
+If the officeRFIDs list is empty, indicating that the association failed,
+ the method returns a specific error code (RESPONSE_ERR_CRM).
+
+If the association was successful, the method prepares an update request object (updateRfidRequest)
+ by adding each OfficeRFID item from the officeRFIDs list.
+
+The method converts the update request object to a string representation.
+
+The method creates an instance of HttpClient to send an HTTP POST request to the Sirius API.
+
+The request includes the access token in the request headers and the update request string in the request body.
+
+The method sends the request synchronously (client.SendAsync(request).Result) and retrieves the response.
+
+If the response status code is HttpStatusCode.OK (indicating a successful request), 
+the method reads the response content as a string.
+
+The response content is deserialized into an array of UpdateRFIDSuccessResponse objects 
+using a JsonHandler utility class.
+
+If the response array is empty, indicating an error in the response, the method creates an error message, 
+inserts it into a support group email, and returns an error code (RESPONSE_ERR_CHARGERBACKEND).
+
+If there are failed RFID tags in the response, the method creates an error message, 
+inserts it into a support group email, and returns an error code (RESPONSE_ERR_CHARGERBACKEND).
+
+If there are no failed RFID tags in the response, the method returns a success code (RESPONSE_SUCCESS).
+
+If the response status code is not HttpStatusCode.OK, indicating a request failure, 
+the method creates an error message, inserts it into a support group email, and returns an error code (RESPONSE_ERR_CHARGERBACKEND).
+
+Overall, the code performs the following steps:
+ associating the RFID tags with a customer using a data access layer, 
+ sending an update request to the Sirius API, 
+ processing the response,
+ and handling success and failure scenarios by returning specific error codes or sending error emails.
+
+
+
+
+
+
+
+
+
 
 

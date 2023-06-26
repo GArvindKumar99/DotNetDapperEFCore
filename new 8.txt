@@ -1,0 +1,42 @@
+function assignvrfid() {
+  const selectedRfids = document.querySelectorAll('input[name="rfid"]:checked');
+  
+  // Generate new vrfid
+  const newVrfid = Math.floor(Math.random() * 1000000);
+
+  // Add vrfid to each selected rfid's data attribute
+  selectedRfids.forEach(rfid => {
+    rfid.dataset.vrfid = newVrfid;
+  });
+
+  // Display selected rfids along with new vrfid
+  const selectedRfidsText = Array.from(selectedRfids).map(rfid => `RFID ${rfid.value} (vrfid ${rfid.dataset.vrfid})`).join(', ');
+  const newVrfidText = `New vrfid: ${newVrfid}`;
+  const resultText = `${selectedRfidsText} | ${newVrfidText}`;
+
+  const resultContainer = document.getElementById('result-container');
+  resultContainer.textContent = resultText;
+}
+
+---
+
+async function GetPaymentType(value) {
+    let Paymenttype = value;
+
+    let customerId = selectedCustomer.ContactInfo.CustomerId;
+
+    let request = {
+        customerId: customerId
+    }
+
+    let response = await fetch('AjaxWebService.svc/GetPaymentMethodDetails',
+       {
+           method: 'POST',
+           headers: new Headers({ 'Content-Type': 'application/json' }),
+         body: JSON.stringify(request)
+       });
+
+    let result = await response.json();
+    result = result != null ? result.d : null;
+
+}

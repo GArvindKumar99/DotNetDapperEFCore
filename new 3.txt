@@ -1,0 +1,199 @@
+admincontrollaer layer->
+        [AllowAnonymous]
+        [HttpPost("[action]")]
+        public async Task<ActionResult<GetUserByIdResponse>> GetUserByIdV1([FromBody] GetUserByIdRequest getUserByIdRequest)
+        {
+            if (getUserByIdRequest == null)
+                return BadRequest();
+                
+            var response = await _useradminService.GetUserByIdV1(getUserByIdRequest);
+
+            return Ok(response);
+        }
+----
+adminservice layer
+
+        public async Task<GetUserByIdResponse> GetUserByIdV1([FromBody] GetUserByIdRequest getUserByIdRequest)
+        {
+            var  response = new GetUserByIdResponse();
+            int Id = getUserByIdRequest.Id;
+
+            response = await _unitOfWork.VegaUserRepository.VegaUserDetails(Id);
+
+            return response;
+        }
+		
+----
+vegaUserRepo layer(create this in customer repo)
+
+using Dapper;
+using GnDAL.Constants;
+using GnDAL.CustomerRepository.Interface;
+using GnDAL.Models.ManagementData;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using GnDAL.Models.CustomEntitiesModel;
+
+namespace GnDAL.CustomerRepository.Implementation
+{
+    public class VegaUserRepository : IVegaUserRepository
+    {
+        private readonly IDapperORM _dapperORM;
+        private readonly IConfiguration _configuration;
+
+        public VegaUserRepository(IDapperORM dapperORM, IConfiguration configuration)
+        {
+            _dapperORM = dapperORM;
+            _configuration = configuration;
+        }
+
+        public async Task<GetUserByIdResponse> VegaUserDetails(int Id)
+        {
+            string connectionString = _configuration.GetConnectionString(DBConstants.MANAGEMENTDATA_DB);
+
+            DynamicParameters dynamicParameters = new DynamicParameters();
+            dynamicParameters.Add("Id", Id);
+
+            var query = "select VC.Id,VC.UserName,VC.FirstName,VC.LastName,VC.Mobile,VC.Email,VC.Status,
+			VC.VegaUserGroupId as UserGroupID, R.Name as UserGroupName,R.VendorId ,VC.CustomerId from VegaUserGroups R " 
+			+"inner join VegaUsers VC on R.Id = VC.VegaUserGroupId " + "WHERE VC.Id =@Id";
+            var result = await _dapperORM.ExecuteQuerySingleRecord<GetUserByIdResponse>(connectionString, query, dynamicParameters);
+
+            return result;
+        }
+
+
+    }
+}
+---
+ivegauserepo layer-->
+
+using GnDAL.CustomerRepository.Implementation;
+using GnDAL.Models.ManagementData;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using GnDAL.Models.CustomEntitiesModel;
+
+namespace GnDAL.CustomerRepository.Interface
+{
+     public interface IVegaUserRepository
+    {
+        Task<GetUserByIdResponse> VegaUserDetails(int Id);
+    }
+}
+
+
+----
+unitofwork layer->
+
+using GnDAL.CustomerRepository.Interface;
+using GnDAL.CustomerRepository.Implementation;
+using GnDAL.Models.ManagementData;
+using GnDAL.UOW.Interface;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace GnDAL.UOW.Implementation
+{
+    public class UnitOfWork : IUnitOfWork
+    {
+        #region Dapper
+
+        private readonly IDapperORM _dapperORM;
+        private readonly IConfiguration _configuration;
+
+        #endregion Dapper
+
+
+        #region ManagementRepositories
+
+        private IBillingInfoRepository _billingInfoRepository;
+        private IVegaUserRepository _vegauserRepository;
+
+        #endregion ManagementRepositories
+
+
+        public UnitOfWork(IConfiguration configuration, IDapperORM dapperORM)
+        {
+            _configuration = configuration;
+            _dapperORM = dapperORM;
+        }
+
+        public IBillingInfoRepository BillingInfoRepository
+        {
+            get
+            {
+                if (_billingInfoRepository == null)
+                {
+                    _billingInfoRepository = new BillingInfoRepository(_dapperORM, _configuration);
+                }
+                return _billingInfoRepository;
+            }
+            private set { }
+        }
+
+        public IVegaUserRepository VegaUserRepository
+        {
+            get
+            {
+                if (_vegauserRepository == null)
+                {
+                    _vegauserRepository = new VegaUserRepository(_dapperORM, _configuration);
+                }
+                return _vegauserRepository;
+            }
+            private set { }
+        }
+
+
+        public void Dispose()
+        {
+        }
+    }
+}
+
+----
+IUnitOfWork layer
+
+using GnDAL.CustomerRepository.Interface;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace GnDAL.UOW.Interface
+{
+    public interface IUnitOfWork : IDisposable
+    {
+        #region Management
+
+        IBillingInfoRepository BillingInfoRepository { get; }
+
+        IVegaUserRepository VegaUserRepository { get; }
+        #endregion
+    }
+}
+
+
+----
+    public async Task<GetUserByIdResponse> GetUserByIdV1([FromBody] GetUserByIdRequest getUserByIdRequest)
+        {
+            var  response = new GetUserByIdResponse();
+            int Id = getUserByIdRequest.Id;
+
+            response = await _unitOfWork.VegaUserRepository.VegaUserDetails(Id);
+
+            return response;
+        }

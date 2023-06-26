@@ -1,0 +1,21 @@
+sdlc
+
+planning
+analysis
+design
+implementation
+testing and integration
+maintenance
+
+stlc
+
+Requirement analysis
+test planning
+test case development
+test environment setup
+test execution
+test cycle closure
+
+
+
+

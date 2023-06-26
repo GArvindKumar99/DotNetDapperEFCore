@@ -1,18 +1,25 @@
-function SearchCharger() {
-    var SearchValue = document.getElementById("m_ChargerSearchBoxText").value.trim();
+async function assignVRFID(customerId) {
+  try {
+  
+    let request = {
+      ID: customerId
+    };
+    
+    let response = await fetch('AjaxWebService.svc/AssignVrfid', {
+      method: 'POST',
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(request)
+    });
 
-    if (SearchValue.length < 1) {
-        alert("Enter at least one character to perform a search.");
-        return;
-    }
+    let result = await response.json();
+    
+   
+    if (result != null ) {
 
-    if (SearchValue.indexOf('%') != -1) {
-        alert("Search key should not have the wildcard character '%'.");
-        return;
-    }
+	
+ 
+                     }
 
-    showLoadingScreen();
-
-    // Call the backend API to search for chargers matching the search value.
-    GetAjaxService().SearchCharger(SearchValue, callback_searchchargers);
+  
+   
 }

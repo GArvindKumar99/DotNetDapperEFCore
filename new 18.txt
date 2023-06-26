@@ -1,0 +1,66 @@
+create PROCEDURE [dbo].[AttachVRfidToCustomerNew]
+	-- Add the parameters for the stored procedure here
+	@CustomerId int
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	
+	-- Insert statements for procedure here
+	
+	  DECLARE
+	@RFIDId int,
+    @RecentId int,
+    @RFID nvarchar(max),
+    @Type nvarchar(max),
+	@Id int,
+	@CardId nvarchar(max),
+	@RFIDName nvarchar(max),
+	@NewRFIDName nvarchar(max),
+    @LastVR nvarchar(max),
+    @NewVR nvarchar(max)
+	-- If VRFID is not available for this customer, create and attach
+	IF NOT EXISTS (SELECT RFID FROM OfficeRFIDs WHERE CustomerId = @CustomerId AND RFID LIKE 'VR%')
+		BEGIN
+
+			 -- If no available VR RFID is found, create a new one by incrementing the last VR RFID found in the table
+	    SET @LastVR = (SELECT TOP 1 RFID FROM OfficeRFIDs WHERE RFID LIKE 'VR%' ORDER BY Id DESC);
+		SET @NewVR = (select CONCAT('VR0000', cast(SUBSTRING(@LastVR,3,11) as int) +1)); 
+
+
+		SET @NewRFIDName=(select CONCAT('VR.972.001.0000', SUBSTRING(@NewVR,7,11)));
+
+      -- Insert the new VR RFID with the specified parameters
+
+	  INSERT INTO OfficeRFIDs ( RFID, Type, RFIDName, CustomerId, RegisterDate, LastUpdate, IsActive, IsDefault, IsExpired, CardId, DateExpired, Comment)
+		VALUES (@NewVR, 'GN1' , @NewRFIDName, @CustomerId, GETUTCDATE(), GETUTCDATE(), 0, 0, NULL, @NewRFIDName, NULL, NULL);  
+
+	 set @RecentId =CAST(@@Identity as int)
+	 select * from OfficeRFIDs where Id=@RecentId
+
+		END
+	ELSE 
+	-- If VRFID is attached but not enabled for this customer, then make it enabled
+
+		IF NOT EXISTS(SELECT RFID FROM OfficeRFIDs WHERE IsActive = 1 AND  CustomerId = @CustomerId AND RFID LIKE 'VR%')
+		BEGIN
+			set @RFIDId = (SELECT TOP 1 Id FROM OfficeRFIDs WHERE RFID LIKE 'VR%' AND CustomerId = @CustomerId)
+
+			update OfficeRFIDs set CustomerId = @CustomerId, RegisterDate = GETDATE(), IsActive = 1 where Id = @RFIDId
+
+			SELECT Id,RFID,Type,CustomerId,RegisterDate,LastUpdate,IsActive,CardId FROM OfficeRFIDs WHERE Id = @RFIDId  
+
+		END
+			
+END
+
+-----
+const utcDate = "/Date(1686029781133+0530)/";
+const timestamp = parseInt(utcDate.substr(6));
+const date = new Date(timestamp);
+
+const options = { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true };
+const formattedDate = date.toLocaleString('en-US', options);
+
+console.log(formattedDate);

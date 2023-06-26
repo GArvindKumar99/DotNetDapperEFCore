@@ -1,0 +1,12 @@
+SQL:BatchCompleted	SELECT COUNT(*) as TotalRecords FROM (
+  SELECT vu.Id
+  FROM VegaUsers vu
+  INNER JOIN VegaUserGroups vug ON vu.Id = vug.Id
+  WHERE vu.FirstName = 'Yoges'
+) AS joined_table_name;
+
+
+select *  from VegaUsers vu inner join VegaUserGroups vug  on vu.Id=vug.Id where FirstName='Yoges'
+	Microsoft SQL Server Management Studio - Query	Arvind Kumar	DESKTOP-JUSEEN9\Arvind Kumar	0	100	0	3	7172	61	2023-06-20 09:58:29.587	2023-06-20 09:58:29.590		
+
+

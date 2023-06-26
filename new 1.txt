@@ -1,0 +1,48 @@
+getallusergriup
+
+admincontroller layer->
+
+        [AllowAnonymous]
+        [HttpPost("[action]")]
+        public async Task<ActionResult<GetAllUserGroupResponse>> GetAllUserGroup([FromBody] GetAllUserGroupRequest getAllUserGroupRequest)
+        {
+            if (getAllUserGroupRequest == null)
+                return BadRequest();
+
+            var response = await _useradminService.GetAllUserGroup(getAllUserGroupRequest);
+
+            return Ok(response);
+        }
+---
+adminservice layer->
+
+ public async Task<List<GetAllUserGroupResponse>> GetAllUserGroup(GetAllUserGroupRequest getAllUserGroupRequest)
+        {
+            List<GetAllUserGroupResponse> response = new List<GetAllUserGroupResponse>();
+            Expression<Func<VegaUserGroup, bool>> condition = null;
+
+            if (getAllUserGroupRequest.VendorId > 0)
+                condition = condition.And(x => x.VendorId == getAllUserGroupRequest.VendorId);
+
+            var userGroups = await _oldUnitOfWork.VegaUserGroupsRepository.GetWithFilter(condition);
+
+            response = _mapper.Map<List<GetAllUserGroupResponse>>(userGroups);
+
+            return response;
+        }
+------
+oldunitofwork.cs layer
+    public IVegaUserGroupsRepository VegaUserGroupsRepository
+        {
+            get
+            {
+                if (_vegaUserGroupsRepository == null)
+                {
+                    _vegaUserGroupsRepository = new VegaUserGroupsRepository(_gnmanagementdatadbcontext);
+                }
+                return _vegaUserGroupsRepository;
+            }
+            private set { }
+        }
+----
+

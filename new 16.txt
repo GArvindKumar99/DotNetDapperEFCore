@@ -1,12 +1,49 @@
+CREATE PROCEDURE [dbo].[emobility_AssignVrfid]
+	
+	 @CustomerId int
+	
+AS
+BEGIN
 
--- to find last sequence of RFID
-select * from OfficeRFIDs where RFID like 'VR%' and CustomerId is null order by id desc 
+  DECLARE
+    @RecentId int,
+  @RFID nvarchar(max),
+  @Type nvarchar(max),
+	@Id int,
+	@CardId nvarchar(max),
+	@RFIDName nvarchar(max),
+	@NewRFIDName nvarchar(max),
+    @LastVR nvarchar(max),
+    @NewVR nvarchar(max)
 
+	SET NOCOUNT ON;
+		-- Search for VR RFIDs that are available (CustomerId is null) in descending order
+	IF EXISTS (SELECT  * FROM OfficeRFIDs WHERE RFID LIKE 'VR%' AND CustomerId IS NULL  )
+	BEGIN
+    -- If an available VR RFID is found, get the highest one
+    SELECT TOP 1  @Id=Id FROM OfficeRFIDs WHERE RFID LIKE 'VR%' AND CustomerId IS NULL ORDER BY Id DESC;  
+     
+  
+   --update  
+   UPDATE OfficeRFIDs SET CustomerId = @CustomerId WHERE Id = @Id
+   select * from OfficeRFIDs where Id=@Id
 
+   END
+   
+   ELSE
+     
+ BEGIN
+    -- If no available VR RFID is found, create a new one by incrementing the last VR RFID found in the table
+	    SET @LastVR = (SELECT TOP 1 RFID FROM OfficeRFIDs WHERE RFID LIKE 'VR%' ORDER BY Id DESC);
+		SET @NewVR = (select CONCAT('VR0000', cast(SUBSTRING(@LastVR,3,11) as int) +1)); 
+--above code is getting updated
+		SET @NewRFIDName=(select CONCAT('VR.972.001.0000', SUBSTRING(@NewVR,7,11)));
+      -- Insert the new VR RFID with the specified parameters
+	  INSERT INTO OfficeRFIDs ( RFID, Type, RFIDName, CustomerId, RegisterDate, LastUpdate, IsActive, IsDefault, IsExpired, CardId, DateExpired, Comment)
+	VALUES (@NewVR, 'GN1' , @NewRFIDName, @CustomerId, GETUTCDATE(), GETUTCDATE(), 0, 0, NULL, @NewRFIDName, NULL, NULL);  
 
-select GETUTCDATE()
+	 set @RecentId =CAST(@@Identity as int)
+ select * from OfficeRFIDs where Id=@RecentId
 
-
---gets actual date
-
-
+  END
+END

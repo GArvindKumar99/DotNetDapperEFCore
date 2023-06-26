@@ -1,28 +1,42 @@
-CREATE PROCEDURE [dbo].[SP_OM_GetChargersBySerial]
-	@Serial nvarchar(50) =NULL,
-	@IP nvarchar(50)=NULL
+CREATE PROCEDURE [dbo].[AttachVRfidToCustomerNew]
+	-- Add the parameters for the stored procedure here
+	@CustomerId int
 AS
 BEGIN
-     SET NOCOUNT ON;
-	 	 	
-	if @Serial is not  null or @Serial <> ''
-	BEGIN 
-	
-		 SELECT c.Id, c.Serial, c.ChargerType, c.IP, cc.FirstName + ' ' + cc.LastName AS FullName
-        FROM OfficeChargers c 
-        INNER JOIN OfficeCustomers oc ON c.CustomerId=oc.Id 
-        INNER JOIN CustomerContact cc ON oc.ContactId=cc.Id
-        WHERE c.Serial=@Serial
-    END
+	-- SET NOCOUNT ON added to prevent extra result sets from interfering with SELECT statements.
+	SET NOCOUNT ON;
 
-	else IF @IP IS NOT NULL or @IP <> ''
+	-- Check if the whole database doesn't have any free VRFID
+	IF NOT EXISTS (SELECT TOP 1 1 FROM OfficeRFIDs WHERE RFID LIKE 'VR%' AND CustomerId IS NULL)
 	BEGIN
-	  SELECT c.Id, c.Serial, c.ChargerType, c.IP, cc.FirstName + ' ' + cc.LastName AS FullName
-        FROM OfficeChargers c 
-        INNER JOIN OfficeCustomers oc ON c.CustomerId=oc.Id 
-        INNER JOIN CustomerContact cc ON oc.ContactId=cc.Id  
-        WHERE c.IP = @IP
+		DECLARE @freeVRFIDId NVARCHAR(50)
 
-END
-	     	  
+		-- Find a free VRFID
+		SELECT TOP 1 @freeVRFIDId = RFID
+		FROM OfficeRFIDs
+		WHERE CustomerId IS NULL
+
+		-- Attach the free VRFID to the customer and set IsActive = 0
+		UPDATE OfficeRFIDs
+		SET CustomerId = @CustomerId, IsActive = 0
+		WHERE RFID = @freeVRFIDId
+	select * from OfficeRFIDs where RFID = @freeVRFIDId	
+	END
+	ELSE
+	BEGIN
+		DECLARE @LastVR NVARCHAR(MAX)
+		DECLARE @NewVR NVARCHAR(MAX)
+		DECLARE @NewRFIDName NVARCHAR(MAX)
+
+		-- Generate a new VRFID
+		SET @LastVR = (SELECT TOP 1 RFID FROM OfficeRFIDs WHERE RFID LIKE 'VR%' ORDER BY Id DESC);
+		SET @NewVR = CONCAT('VR', RIGHT('0000' + CAST(CAST(SUBSTRING(@LastVR, 3, 11) AS INT) + 1 AS NVARCHAR(10)), 4));
+		SET @NewRFIDName = CONCAT('VR.972.001.0000', SUBSTRING(@NewVR, 3, 11));
+
+		-- Insert the new VRFID with the specified parameters
+		INSERT INTO OfficeRFIDs (RFID, Type, RFIDName, CustomerId, RegisterDate, LastUpdate, IsActive, IsDefault, IsExpired, CardId, DateExpired, Comment)
+		VALUES (@NewVR, 'GN1', @NewRFIDName, @CustomerId, GETUTCDATE(), GETUTCDATE(), 0, 0, NULL, @NewRFIDName, NULL, NULL)
+		 set @RecentId =CAST(@@Identity as int)
+	 select * from OfficeRFIDs where Id=@RecentId
+	END
 END

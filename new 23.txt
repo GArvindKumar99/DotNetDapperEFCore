@@ -1,0 +1,74 @@
+https://vegaapi.localhost.com/Admin/GetMatchingUser
+
+
+request body 
+{
+  "PageNumber": 1,
+  "PageSize": 10,
+  "UserName": "Yoges",
+  "Name": "Yoges",
+  "VendorId": 0,
+  "UserGroupId": 0,
+  "Email": "yogeswarank@gnrgy.com",
+  "Status": true
+}
+
+	
+Response body
+Download
+{
+  "TotalRecords": 1,
+  "VegaUsers": [
+    {
+      "UserId": 4,
+      "UserName": "3",
+      "FirstName": "Arvind",
+      "LastName": "k",
+      "VendorId": 2,
+      "VendorName": "Gnrgy",
+      "UserGroupId": 3,
+      "UserGroupName": "qas",
+      "Email": "arvindk@gnrgy.com",
+      "Status": true
+    }
+  ]
+}
+
+
+select *  from VegaUsers vu inner join VegaUserGroups vug  on vu.Id=vug.Id where FirstName='Yoges'.
+..the result i get from this i should count
+like
+SELECT COUNT(*) FROM joined_table_name..is this possible?
+
+
+SELECT COUNT(*) FROM (
+  SELECT *
+  FROM VegaUsers vu
+  INNER JOIN VegaUserGroups vug ON vu.Id = vug.Id
+  WHERE FirstName = 'Yoges'
+) AS joined_table_name;
+
+
+
+
+requiring both results in one table.Is it possible?
+query 1:SELECT COUNT(*) as TotalRecords FROM (
+  SELECT vu.Id
+  FROM VegaUsers vu
+  INNER JOIN VegaUserGroups vug ON vu.Id = vug.Id
+  WHERE vu.FirstName = 'Yoges'
+) AS joined_table_name;
+
+
+Query 2:select *  from VegaUsers vu inner join VegaUserGroups vug  on vu.Id=vug.Id where FirstName='Yoges';
+
+
+SQL:BatchCompleted	SELECT COUNT(*) as TotalRecords FROM (
+  SELECT vu.Id
+  FROM VegaUsers vu
+  INNER JOIN VegaUserGroups vug ON vu.Id = vug.Id
+  WHERE vu.FirstName = 'Yoges'
+) AS joined_table_name;
+
+
+select *  from VegaUsers vu inner join VegaUserGroups vug  on vu.Id=vug.Id where FirstName='Yoges'	Microsoft SQL Server Management Studio - Query	Arvind Kumar	DESKTOP-JUSEEN9\Arvind Kumar	0	122	0	3	7172	61	2023-06-20 10:14:58.387	2023-06-20 10:14:58.390		

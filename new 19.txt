@@ -1,0 +1,57 @@
+create PROCEDURE [dbo].[AttachVRfidToCustomer]
+    -- Add the parameters for the stored procedure here
+    @CustomerId int
+AS
+BEGIN
+    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON;
+
+ 
+
+    -- Insert statements for procedure here
+
+ 
+
+    DECLARE @RFIDId int
+     -- If VRFID is not available for this customer, then attach one
+    IF NOT EXISTS (SELECT RFID FROM OfficeRFIDs WHERE CustomerId = @CustomerId AND RFID LIKE 'VR%')
+        BEGIN
+
+ 
+
+            set @RFIDId = (SELECT TOP 1 Id FROM OfficeRFIDs WHERE RFID LIKE 'VR%' AND CustomerId IS NULL)
+
+ 
+
+            update OfficeRFIDs set CustomerId = @CustomerId, RegisterDate = GETDATE(), IsActive = 0 where Id = @RFIDId
+
+ 
+
+            SELECT Id,RFID,Type,CustomerId,RegisterDate,LastUpdate,IsActive,CardId FROM OfficeRFIDs WHERE Id = @RFIDId  
+
+ 
+
+        END
+    ELSE 
+    -- If VRFID is attached but not enabled for this customer, then make it enabled
+
+ 
+
+        IF NOT EXISTS(SELECT RFID FROM OfficeRFIDs WHERE IsActive = 1 AND  CustomerId = @CustomerId AND RFID LIKE 'VR%')
+        BEGIN
+            set @RFIDId = (SELECT TOP 1 Id FROM OfficeRFIDs WHERE RFID LIKE 'VR%' AND CustomerId = @CustomerId)
+
+ 
+
+            update OfficeRFIDs set CustomerId = @CustomerId, RegisterDate = GETDATE(), IsActive = 1 where Id = @RFIDId
+
+ 
+
+            SELECT Id,RFID,Type,CustomerId,RegisterDate,LastUpdate,IsActive,CardId FROM OfficeRFIDs WHERE Id = @RFIDId  
+
+ 
+
+        END
+
+END

@@ -1,0 +1,31 @@
+GetUserGroupDataById
+
+Iadmin
+        Task<GetUserGroupDataByIdResponse> GetUserGroupDataByIdV1(GetUserGroupDataByIdRequest getUserGroupDataById);
+		
+		
+Admin service
+   public async Task<GetUserGroupDataByIdResponse> GetUserGroupDataByIdV1(GetUserGroupDataByIdRequest getUserGroupDataById)
+        {
+            var response = new GetUserGroupDataByIdResponse();
+
+            int Id = getUserGroupDataById.Id;
+
+            response = await _unitOfWork.VegaUserGroupRepository.VegaUserGroupDetailsById(Id);
+            return response;
+        }
+		
+AdminController
+        [AllowAnonymous]
+        [HttpPost("[action]")]
+        public async Task<ActionResult<GetUserGroupDataByIdResponse>> GetUserGroupDataByIdV1([FromBody] GetUserGroupDataByIdRequest getUserGroupDataById)
+        {
+            if (getUserGroupDataById == null)
+                return BadRequest();
+
+            var response = await _useradminService.GetUserGroupDataByIdV1(getUserGroupDataById);
+
+            return Ok(response);
+        }
+----
+

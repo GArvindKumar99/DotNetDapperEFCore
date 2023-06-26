@@ -1,0 +1,80 @@
+
+I apologize for the confusion. It seems that both VegaUsers and VegaUserGroups tables have a column named 'Id', which causes a naming conflict in the join query. To resolve this, you need to explicitly specify which 'Id' column you want to select.
+
+Here's an updated version of the query:
+
+sql
+Copy code
+SELECT COUNT(*) FROM (
+  SELECT vu.Id
+  FROM VegaUsers vu
+  INNER JOIN VegaUserGroups vug ON vu.Id = vug.Id
+  WHERE vu.FirstName = 'Yoges'
+) AS joined_table_name;
+In this query, I have specified vu.Id in the inner query to select the 'Id' column from the VegaUsers table. This resolves the naming conflict, and you can now count the rows returned by the join query without encountering the error.
+
+WITH CTE AS (
+  SELECT vu.Id
+  FROM VegaUsers vu
+  INNER JOIN VegaUserGroups vug ON vu.Id = vug.Id
+  WHERE vu.FirstName = 'Yoges'
+)
+SELECT COUNT(*) as TotalRecords, CTE.*
+FROM CTE;
+
+
+WITH CTE AS (
+  SELECT vu.Id
+  FROM VegaUsers vu
+  INNER JOIN VegaUserGroups vug ON vu.Id = vug.Id
+  WHERE vu.FirstName = 'Yoges'
+)
+SELECT COUNT(*) as TotalRecords, CTE.Id, vu.*, vug.*
+FROM CTE
+JOIN VegaUsers vu ON CTE.Id = vu.Id
+JOIN VegaUserGroups vug ON CTE.Id = vug.Id;
+
+
+WITH CTE AS (
+  SELECT vu.Id
+  FROM VegaUsers vu
+  INNER JOIN VegaUserGroups vug ON vu.Id = vug.Id
+  WHERE vu.FirstName = 'Yoges'
+)
+SELECT COUNT(*) as TotalRecords
+FROM CTE
+JOIN VegaUsers vu ON CTE.Id = vu.Id
+JOIN VegaUserGroups vug ON CTE.Id = vug.Id;
+
+SELECT column1, column2, column3
+FROM table1
+UNION
+SELECT column4 AS column1, column5 AS column2, column6 AS column3
+FROM table2;
+
+
+
+
+
+
+To combine the results of two SQL tables into a single table, you can use the UNION operator. Here's an example of how you can achieve this:
+
+sql
+Copy code
+SELECT column1, column2, column3
+FROM table1
+UNION
+SELECT column1, column2, column3
+FROM table2;
+In the above example, table1 and table2 are the names of the two tables you want to combine. column1, column2, and column3 represent the columns you want to select from both tables. Make sure that the number of columns and their data types match in both SELECT statements.
+
+The UNION operator combines the results of the two SELECT statements and eliminates any duplicate rows. If you want to include duplicate rows, you can use the UNION ALL operator instead.
+
+Note: The columns you select in both SELECT statements should be of the same data types and in the same order. If they have different data types, you may encounter errors.
+
+
+SELECT column1
+FROM table1
+UNION
+SELECT column2, column3, column4, ...
+FROM table2;

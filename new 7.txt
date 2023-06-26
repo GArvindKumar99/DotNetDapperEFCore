@@ -1,0 +1,27 @@
+DECLARE @NewVR RFID
+
+-- Search for VR RFIDs that are available (CustomerId is null) in descending order
+IF EXISTS (SELECT 1 FROM OfficeRFIDs WHERE RFID LIKE 'VR%' AND CustomerId IS NULL)
+BEGIN
+    -- If an available VR RFID is found, get the highest one
+    SELECT TOP 1 @NewVR = RFID FROM OfficeRFIDs WHERE RFID LIKE 'VR%' AND CustomerId IS NULL ORDER BY RFID DESC;
+END
+ELSE
+BEGIN
+    -- If no available VR RFID is found, create a new one by incrementing the last VR RFID found in the table
+    DECLARE @LastVR RFID
+    SELECT @LastVR = RFID FROM OfficeRFIDs WHERE RFID LIKE 'VR%' ORDER BY RFID DESC;
+    SET @NewVR = @LastVR + 1;
+END
+
+-- Insert the new VR RFID with the specified parameters
+INSERT INTO OfficeRFIDs (RFID, Type, CustomerId, RegisterDate, LastUpdate, IsActive, CardId)
+VALUES (@NewVR, @Type, @CustomerId, GETUTCDATE(), GETUTCDATE(), 0, @CardId);
+
+
+
+
+
+CREATE TYPE RFID
+FROM varchar(20)
+GO

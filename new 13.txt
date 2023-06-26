@@ -1,43 +1,85 @@
-function SearchCharger() {
-  var serialNumber = document.getElementById("serialNumber").value.trim();
-  var ip = document.getElementById("ip").value.trim();
-  var SearchCharger = document.getElementById("m_SearchBoxSearchBtn").value;
-  var SearchValue = document.getElementById("m_ChargerSearchBoxText").value.trim();
-  
-  if (SearchValue.length < 1) {
-    alert("Enter at least one character to perform a search");
-    return;
-  }
-  
-  if (SearchValue.indexOf('%') !== -1) {
-    alert("Search key should not have the wild character '%'");
-    return;
-  }
-  
-  showLoadingScreen();
-  
-  if (serialNumber !== "") {
-    GetAjaxService().GetChargerBySerial(SearchCharger, SearchValue, function(result) {
-      displayChargerResults(result, "Serial Number");
-    });
-  } else if (ip !== "") {
-    GetAjaxService().GetChargerByIp(SearchCharger, SearchValue, function(result) {
-      displayChargerResults(result, "IP");
-    });
-  }
-}
+  RegiserUserV1 api and AddNewCard api are using same sp to add/create vrfid for customers
 
-function displayChargerResults(result, identifier) {
-  var table = document.createElement("table");
-  var headers = "<tr><th>" + identifier + "</th><th>Charger Type</th><th>Full Name</th></tr>";
-  var rows = "";
+ 
 
-  for (var i = 0; i < result.length; i++) {
-    var charger = result[i];
-    rows += "<tr><td>" + charger[identifier] + "</td><td>" + charger.ChargerType + "</td><td>" + charger.FullName + "</td></tr>";
-  }
+    --> AttachVRfidToCustomerNew SP
 
-  table.innerHTML = headers + rows;
-  document.getElementById("searchResult").appendChild(table);
-  disableLoadingScreen();
-}
+    if customer doesnt have any vrfid(meaning whole database does not have a freevrfid)
+
+        then,
+        nvarchar freeVRFIDId = find one free vrfid
+
+        if(freeVRFIDId doesnt exist)
+            then create one vrfid and attach to this customer and make isactive = 0
+      else  
+        attach this to customer and make isactive = 0 where id = freeVRFIDId
+
+CREATE PROCEDURE [dbo].[AttachVRfidToCustomerNew]
+	-- Add the parameters for the stored procedure here
+	@CustomerId int
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+	DECLARE @freeVRFIDId NVARCHAR(50)
+
+	-- Check if the customer is null
+	IF @CustomerId IS NULL
+	BEGIN
+		-- If the customer is null, find a free VRFID
+		SELECT TOP 1 @freeVRFIDId = RFID
+		FROM OfficeRFIDs
+		WHERE CustomerId IS NULL
+
+		-- If a free VRFID is found, perform the desired action
+		IF @freeVRFIDId IS NOT NULL
+		BEGIN
+			-- Update the status of the free VRFID to indicate that it is active
+			UPDATE OfficeRFIDs
+			SET CustomerId = @CustomerId, IsActive = 0
+			WHERE RFID = @freeVRFIDId
+		END
+		ELSE
+		BEGIN
+			-- Generate a new VRFID ID
+			DECLARE @LastVR NVARCHAR(MAX)
+			DECLARE @NewVR NVARCHAR(MAX)
+			DECLARE @NewRFIDName NVARCHAR(MAX)
+
+			SET @LastVR = (SELECT TOP 1 RFID FROM OfficeRFIDs WHERE RFID LIKE 'VR%' ORDER BY Id DESC);
+			SET @NewVR = CONCAT('VR', RIGHT('0000' + CAST((CAST(SUBSTRING(@LastVR, 3, 11) AS INT) + 1) AS NVARCHAR), 4));
+			SET @NewRFIDName = CONCAT('VR.972.001.0000', SUBSTRING(@NewVR, 3, 11));
+
+			-- Insert the new VRFID into the OfficeRFIDs table with the null customer and isactive = 0
+			INSERT INTO OfficeRFIDs (RFID, Type, RFIDName, CustomerId, RegisterDate, LastUpdate, IsActive, IsDefault, IsExpired, CardId, DateExpired, Comment)
+			VALUES (@NewVR, 'GN1', @NewRFIDName, NULL, GETUTCDATE(), GETUTCDATE(), 0, 0, NULL, @NewRFIDName, NULL, NULL)
+		END
+	END
+	ELSE
+	BEGIN
+		-- If the customer is not null, attach a VRFID to the customer and set isactive = 0
+		-- Check if the system has any available VRFIDs
+		IF NOT EXISTS (SELECT TOP 1 1 FROM OfficeRFIDs WHERE CustomerId IS NULL)
+		BEGIN
+			-- Generate a new VRFID ID
+			DECLARE @NewVR NVARCHAR(MAX)
+			DECLARE @NewRFIDName NVARCHAR(MAX)
+
+			SET @NewVR = CONCAT('VR', RIGHT('0000' + CAST((SELECT MAX(CAST(SUBSTRING(RFID, 3, 11) AS INT)) FROM OfficeRFIDs WHERE RFID LIKE 'VR%') + 1 AS NVARCHAR), 4));
+			SET @NewRFIDName = CONCAT('VR.972.001.0000', SUBSTRING(@NewVR, 3, 11));
+
+			-- Insert the new VRFID into the OfficeRFIDs table with the specified customer and isactive = 0
+			INSERT INTO OfficeRFIDs (RFID, Type, RFIDName, CustomerId, RegisterDate, LastUpdate, IsActive, IsDefault, IsExpired, CardId, DateExpired,comment)
+						VALUES (@NewVR, 'GN1', @NewRFIDName, @CustomerId, GETUTCDATE(), GETUTCDATE(), 0, 0, NULL, @NewRFIDName, NULL, NULL)
+		END
+		ELSE
+		BEGIN
+			-- Attach an available VRFID to the customer and set isactive = 0
+			UPDATE OfficeRFIDs
+			SET CustomerId = @CustomerId, IsActive = 0
+			WHERE RFID IN (SELECT TOP 1 RFID FROM OfficeRFIDs WHERE CustomerId IS NULL)
+		END
+	END
+END
+

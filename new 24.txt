@@ -1,0 +1,4 @@
+var query = "\r\n\r\nSELECT COUNT(*) as TotalRecords FROM 
+(\r\n  SELECT vu.Id\r\n  FROM VegaUsers vu\r\n  INNER JOIN VegaUserGroups vug ON vu.Id = vug.Id\r\n
+  WHERE vu.FirstName = '@Name'\r\n) AS joined_table_name;\r\n\r\n\r\n\r\n\r\nselect *  
+  from VegaUsers vu inner join VegaUserGroups vug  on vu.Id=vug.Id where FirstName='@Name'";
